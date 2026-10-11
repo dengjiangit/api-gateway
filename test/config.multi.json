@@ -1,0 +1,67 @@
+{
+  "port": 8083,
+  "host": "127.0.0.1",
+  "rotation": "on_failure",
+  "failover_on": [
+    "rate_limit",
+    "timeout",
+    "server_error"
+  ],
+  "cooldown_ms": 30000,
+  "request_timeout_ms": 120000,
+  "max_attempts": 10,
+  "local_api_key": "",
+  "providers": [
+    {
+      "name": "sensenova",
+      "base_url": "http://127.0.0.1:9091"
+    },
+    {
+      "name": "modelscope",
+      "base_url": "http://127.0.0.1:9092"
+    }
+  ],
+  "model_fallback": {
+    "sns-only-model": [
+      "shared-model"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "sns-acc1",
+      "provider": "sensenova",
+      "api_key": "k1",
+      "models": [
+        "sns-only-model"
+      ]
+    },
+    {
+      "name": "ms-acc1",
+      "provider": "modelscope",
+      "api_key": "k2",
+      "models": [
+        "ms-only-model"
+      ]
+    },
+    {
+      "name": "ms-acc2",
+      "provider": "modelscope",
+      "api_key": "k3",
+      "models": [
+        "shared-model"
+      ]
+    },
+    {
+      "name": "sns-acc2",
+      "provider": "sensenova",
+      "api_key": "k4",
+      "models": [
+        "shared-model"
+      ]
+    }
+  ],
+  "model_alias": {
+    "my-alias": "shared-model",
+    "gpt-4": "shared-model"
+  }
+}

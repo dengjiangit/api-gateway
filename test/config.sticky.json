@@ -1,0 +1,16 @@
+{
+  "port": 8082,
+  "host": "127.0.0.1",
+  "upstream": "http://127.0.0.1:9091",
+  "rotation": "on_failure",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 30000,
+  "request_timeout_ms": 120000,
+  "max_attempts": 10,
+  "local_api_key": "",
+  "accounts": [
+    { "name": "acc-1", "api_key": "fake-key-1", "models": ["sensenova-6.8-flash-lite"] },
+    { "name": "acc-2", "api_key": "fake-key-2", "models": ["sensenova-6.8-flash-lite"] },
+    { "name": "acc-3", "api_key": "fake-key-3", "models": ["sensenova-6.8-flash-lite"] }
+  ]
+}

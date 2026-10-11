@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM 网关管理</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--border:#e3e6eb;--text:#1f2937;--muted:#6b7280;--pri:#2563eb;--ok:#16a34a;--err:#dc2626;--warn:#d97706;--code:#f1f5f9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding:20px}
+.wrap{max-width:1100px;margin:0 auto}
+header{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+h1{font-size:19px;font-weight:600}
+.sub{color:var(--muted);font-size:12.5px}
+.badge{font-size:12px;padding:2px 8px;border-radius:10px;background:#e6f1fb;color:#0c447c}
+.btn{padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;font-size:13px;color:var(--text)}
+.btn:hover{border-color:#c6ccd4}
+.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.btn.pri:disabled{background:#93b4f5;cursor:not-allowed;border-color:#93b4f5}
+.btn.danger{color:var(--err);border-color:#f3c5c5}
+.btn:disabled{opacity:.45;cursor:not-allowed;border-color:var(--border)}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+nav{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+nav button{padding:9px 16px;border:none;background:none;cursor:pointer;font-size:14px;color:var(--muted);border-bottom:2px solid transparent}
+nav button.on{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
+.panel{display:none}.panel.on{display:block}
+.grid{display:grid;gap:12px}
+.cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card .n{font-size:26px;font-weight:600}
+.card .l{color:var(--muted);font-size:12.5px;margin-top:2px}
+h2{font-size:15px;font-weight:600;margin:18px 0 10px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13px}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:#fafbfc;color:var(--muted);font-weight:600;font-size:12.5px}
+tr:last-child td{border-bottom:none}
+.tag{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11.5px;background:var(--code);margin:1px 2px}
+.tag.prov{background:#eeedfe;color:#3c3489}
+.ok{color:var(--ok)}.err{color:var(--err)}.warn{color:var(--warn)}.muted{color:var(--muted)}.sm{font-size:12px;line-height:1.5;margin-top:4px}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font:13px inherit;background:#fff;color:var(--text)}
+textarea{font-family:ui-monospace,Menlo,monospace;resize:vertical}
+.row{display:grid;gap:10px;align-items:end}
+.acc-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.acc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.acc-head b{font-size:14px}
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.frm .full{grid-column:1/-1}
+.prov-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.prov-card>h4{margin:14px 0 6px;font-size:13px;opacity:.75}
+.nested-acc{border-left:2px solid var(--border);padding-left:12px;margin-top:4px}
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+pre{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;font-size:12.5px;max-height:340px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;display:none;z-index:9}
+.chk{display:flex;gap:14px;flex-wrap:wrap}
+.chk label{display:flex;gap:6px;align-items:center;margin:0;color:var(--text);font-size:13px}
+.chk input{width:auto}
+.kv{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.result-ok{border-left:3px solid var(--ok);padding-left:10px}
+.result-err{border-left:3px solid var(--err);padding-left:10px}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--pri);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ord{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.ord-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.ord-row[draggable=true]{cursor:grab}
+.ord-row.dragover{border-color:var(--pri);background:#f3f7ff}
+.ord-idx{width:26px;height:26px;border-radius:50%;background:var(--code);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);flex:none}
+.ord-name{flex:none;min-width:240px}
+.ord-prov{flex:1;min-width:0}
+.ord-empty{border:1px dashed var(--border);border-radius:10px;padding:18px;text-align:center;color:var(--muted)}
+.tier-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px}
+.tier-card>table{margin-top:4px}
+/* ===== 拉取模型勾选弹窗 ===== */
+.modal-mask{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+.modal-mask.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:min(580px,100%);max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.modal-head b{font-size:15px}
+.modal-sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+.modal-tools{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.modal-tools input{flex:1;min-width:160px}
+.modal-list{padding:8px 16px;overflow:auto;flex:1}
+.pick-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.pick-row:hover{background:var(--code)}
+.pick-row input{width:auto;flex:none}
+.pick-row .pn{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
+.modal-foot{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center}
+.modal-foot .cnt{margin-right:auto;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>LLM 网关管理</h1>
+  <span class="badge" id="hver">本地多平台</span>
+  <span class="sub" id="hstat">加载中…</span>
+  <span style="flex:1"></span>
+  <button class="btn" onclick="loadAll()">刷新</button>
+  <button class="btn pri" id="saveBtn" disabled onclick="saveConfig()">保存配置</button>
+</header>
+
+<nav>
+  <button class="on" data-t="dash" onclick="tab('dash')">概览</button>
+  <button data-t="acc" onclick="tab('acc')">平台/账号</button>
+  <button data-t="rule" onclick="tab('rule')">规则</button>
+  <button data-t="order" onclick="tab('order')">模型路由</button>
+  <button data-t="play" onclick="tab('play')">测试</button>
+  <button data-t="log" onclick="tab('log')">日志</button>
+</nav>
+
+<!-- 概览 -->
+<div class="panel on" id="p-dash">
+  <div class="grid cards" id="cards"></div>
+  <h2>账号运行状态</h2>
+  <div id="accStat"></div>
+  <h2>模型池</h2>
+  <div id="modelStat"></div>
+</div>
+
+<!-- 平台/账号（层级：平台 → 平台的模型 → 平台下的账号） -->
+<div class="panel" id="p-acc">
+  <div class="bar">
+    <span class="muted">层级：平台（base_url + 该平台的模型列表）→ 平台下的账号（key + 排名/权重）。账号可不填 models，自动继承所属平台。</span>
+    <span style="flex:1"></span>
+    <button class="btn sm" onclick="verifyAll()">验证全部账号</button>
+    <button class="btn pri sm" onclick="addProvider()">+ 添加平台</button>
+  </div>
+  <div id="provTree"></div>
+</div>
+
+<!-- 规则 -->
+<div class="panel" id="p-rule">
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+    <div class="card"><label>监听端口 port</label><input id="r-port" type="number"></div>
+    <div class="card"><label>绑定地址 host</label><input id="r-host"></div>
+    <div class="card"><label>轮询模式 rotation</label>
+      <select id="r-rotation"><option value="on_failure">on_failure（粘性，失败才切）</option><option value="every_request">every_request（每次换号）</option></select></div>
+    <div class="card"><label>冷却时长 cooldown_ms</label><input id="r-cooldown" type="number"></div>
+    <div class="card"><label>单次超时 request_timeout_ms</label><input id="r-timeout" type="number"></div>
+    <div class="card"><label>最大尝试 max_attempts</label><input id="r-max" type="number"></div>
+    <div class="card"><label>默认模型 default_model <span class="muted">（客户端请求的模型不存在时自动路由到它）</span></label><input id="r-defmodel" placeholder="如 sensenova-6.8-flash-lite（留空关闭）"></div>
+    <div class="card full"><label>本地访问密钥 local_api_key（留空=开放）</label><input id="r-lkey" placeholder="设置后客户端必须带此 key"></div>
+  </div>
+  <div class="card" style="margin-top:12px"><label>切换触发 failover_on</label>
+    <div class="chk">
+      <label><input type="checkbox" id="fo-rate" value="rate_limit"> rate_limit（429 限流）</label>
+      <label><input type="checkbox" id="fo-timeout" value="timeout"> timeout（超时）</label>
+      <label><input type="checkbox" id="fo-server" value="server_error"> server_error（5xx）</label>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><label>统计持久化 persist_stats <span class="muted">（启用后定期落盘，重启不丢计数/日志）</span></label>
+    <div class="chk"><label><input type="checkbox" id="r-persist"> 启用：写入 config.json 同目录的 .stats.json</label></div>
+  </div>
+  <div class="card full" style="margin-top:12px"><label>请求日志落盘 request_log_file <span class="muted">（留空=关闭；填文件名则每条路由结果以 JSONL 追加写入，相对 config 目录）</span></label>
+    <input id="r-logfile" placeholder="例如 requests.log（留空关闭）"></div>
+  <div class="card" style="margin-top:12px"><label>上游探活 health_check <span class="muted">（后台定时探测各账号存活，dead 自动跳过不再选中）</span></label>
+    <div class="chk" style="margin-top:8px">
+      <label><input type="checkbox" id="r-hc-en"> 启用</label>
+      <label>间隔 ms<input id="r-hc-int" type="number" style="width:100px"></label>
+      <label>探测路径<input id="r-hc-path" style="width:150px"></label>
+      <label>超时 ms<input id="r-hc-to" type="number" style="width:100px"></label>
+    </div>
+  </div>
+  <h2>模型回退 model_fallback <span class="muted">（首选模型所有账号失败时，按顺序降级）</span></h2>
+  <div class="card"><textarea id="r-fallback" rows="6" class="mono" spellcheck="false"></textarea>
+    <div class="muted" style="margin-top:6px">JSON，例：{"deepseek-v4-flash":["sensenova-6.8-flash-lite","Qwen/Qwen3-32B-Chat"]}</div></div>
+  <h2>模型别名 model_alias <span class="muted">（客户端用别名，网关路由到真实模型）</span></h2>
+  <div class="card"><textarea id="r-alias" rows="4" class="mono" spellcheck="false"></textarea>
+    <div class="muted" style="margin-top:6px">JSON，例：{"gpt-4":"qwen-plus","claude-sonnet":"deepseek-v4-flash"}</div></div>
+</div>
+
+<!-- 模型路由：分层（层间降级 + 层内加权） -->
+<div class="panel" id="p-order">
+  <div class="bar">
+    <span class="muted">分层路由：<b>层与层之间是降级关系</b>（上一层全部失败才用下一层）；<b>同一层内按权重分摊流量</b>，权重越大分到越多。配置了分层后，其优先级高于下方 model_order。</span>
+    <span style="flex:1"></span>
+    <button class="btn pri sm" onclick="addTier()">+ 添加层</button>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="chk"><label><input type="checkbox" id="r-healthaware" onchange="setHealthAware(this.checked)"> 健康度感知自动降权</label></div>
+    <div class="muted" style="margin-top:6px">实际权重 = 配置权重 × 健康度（0.05~1）。成功率低的模型/账号会自动少分流量，恢复后自动回升。概览页「健康分」列可看当前分数。</div>
+  </div>
+  <div id="tierList"></div>
+
+  <h2>兼容：全局顺序 model_order <span class="muted">（未配置分层时生效，等价于每个模型独占一层）</span></h2>
+  <div class="bar">
+    <span class="muted">客户端请求里的 model 字段会被忽略，网关从列表第 1 个开始依次尝试。拖拽整行或 ↑/↓ 调整。</span>
+    <span style="flex:1"></span>
+    <button class="btn sm" onclick="orderToTiers()">↑ 转为分层</button>
+    <button class="btn sm" onclick="importAllModels()">导入全部模型</button>
+    <button class="btn pri sm" onclick="addToOrder()">+ 添加模型</button>
+  </div>
+  <div id="orderList" class="ord"></div>
+</div>
+
+<!-- 测试 -->
+<div class="panel" id="p-play">
+  <div class="card">
+    <div class="frm">
+      <div><label>平台 / 模型</label><select id="t-model"></select><div class="muted sm">按平台分组：同名模型会出现在多个平台下，选中即测试该平台</div></div>
+      <div><label>提示词</label><input id="t-prompt" value="用一句话介绍你自己"></div>
+      <div class="full"><button class="btn pri" id="t-send" onclick="testModel()">发送测试请求</button> <span id="t-meta"></span></div>
+      <div class="full"><pre id="t-result" style="display:none"></pre></div>
+    </div>
+  </div>
+</div>
+
+<!-- 日志 -->
+<div class="panel" id="p-log">
+  <div class="bar">
+    <span class="muted">最近 200 条路由记录（内存环形缓冲，重启清空）</span>
+    <span id="logStat"></span>
+    <span style="flex:1"></span>
+    <label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="logAuto" checked style="width:auto"> 自动刷新</label>
+    <button class="btn sm" onclick="loadLogs()">刷新</button>
+  </div>
+  <div id="logList"></div>
+</div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+let cfg=null, dirty=false, logTimer=null;
+const accVerify={}; // 账号验证状态：{status:'unverified'|'ok'|'err', msg}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path,opt){const r=await fetch(path,opt);const t=await r.text();let j;try{j=JSON.parse(t)}catch{j=t}if(!r.ok)throw new Error((j&&j.error&&j.error.message)||('HTTP '+r.status));return j}
+function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.background=ok?'#111827':'#b91c1c';t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
+function markDirty(){dirty=true;$('saveBtn').disabled=false;$('hstat').innerHTML='<span class="warn">● 有未保存修改</span>'}
+
+function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));if(t==='log')startLogTimer();else stopLogTimer();if(t==='dash')loadStatus()}
+
+async function loadAll(){
+  try{
+    cfg=await api('/admin/config');
+    Object.keys(accVerify).forEach(k=>delete accVerify[k]);
+    migrateLegacy();dirty=false;$('saveBtn').disabled=true;
+    await loadStatus();renderAcc();renderRule();renderOrder();renderTiers();await loadPlayModels();loadLogs();
+    $('hstat').innerHTML='<span class="ok">● 已加载</span>';
+  }catch(e){$('hstat').innerHTML='<span class="err">加载失败: '+esc(e.message)+'</span>'}
+}
+function migrateLegacy(){
+  if(cfg.upstream&&(!cfg.providers||!cfg.providers.length)){
+    cfg.providers=[{name:'default',base_url:cfg.upstream}];delete cfg.upstream;
+    (cfg.accounts||[]).forEach(a=>{if(!a.provider)a.provider='default'});
+  }
+}
+
+/* ===== 概览 ===== */
+async function loadStatus(){
+  try{
+    const s=await api('/admin/status');
+    $('cards').innerHTML=[
+      ['平台',s.providers.length],['账号',s.accounts.length],['模型',Object.keys(s.models).length],
+      ['总请求',s.summary.total_requests],['429 次数',s.summary.total_rate_limits]
+    ].map(([l,n])=>`<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+    $('accStat').innerHTML='<table><tr><th>账号</th><th>平台</th><th>排名/权重</th><th>模型数</th><th>请求</th><th>429</th><th>超时</th><th>冷却</th><th>健康分</th><th>探活</th><th>最近错误</th></tr>'+
+      s.accounts.map(a=>`<tr><td><b>${esc(a.name)}</b><br><span class="muted mono">${esc(a.api_key_masked)}</span></td>
+      <td><span class="tag prov">${esc(a.provider)}</span></td><td class="muted">P${a.priority??100} / W${a.weight??1}</td><td>${a.models.length}</td><td>${a.requests}</td>
+      <td class="${a.rate_limits?'warn':''}">${a.rate_limits}</td><td>${a.timeouts}</td>
+      <td>${a.cooldown_ms_left>0?'<span class="warn">'+(a.cooldown_ms_left/1000).toFixed(0)+'s</span>':'-'}</td>
+      <td>${a.health_score===null||a.health_score===undefined?'<span class="muted">-</span>':'<span class="'+(a.health_score>=0.8?'ok':a.health_score>=0.5?'warn':'err')+'">'+a.health_score.toFixed(2)+'</span>'}</td>
+      <td>${a.health==='ok'?'<span class="ok">ok</span>':a.health==='dead'?'<span class="err">dead</span>':'<span class="muted">unknown</span>'}${a.last_check_error?`<br><span class="muted">${esc(a.last_check_error)}</span>`:''}</td>
+      <td class="muted">${esc(a.last_error||'-')}</td></tr>`).join('')+'</table>';
+    $('modelStat').innerHTML='<table><tr><th>模型</th><th>账号池</th><th>游标</th></tr>'+
+      Object.entries(s.models).map(([m,v])=>`<tr><td class="mono">${esc(m)}</td><td>${v.accounts.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</td><td>${v.cursor}</td></tr>`).join('')+'</table>';
+  }catch(e){$('cards').innerHTML='<div class="card err">状态加载失败: '+esc(e.message)+'</div>'}
+}
+
+/* ===== 账号 ===== */
+/* ===== 平台 → 平台下账号（层级） ===== */
+function provModelEntry(m){ return typeof m==='string' ? {name:m} : {name:(m&&m.name)||'', priority:m&&m.priority, weight:m&&m.weight}; }
+function renderAcc(){
+  const provs=cfg.providers||[];
+  $('provTree').innerHTML=provs.map((p,pi)=>{
+    const models=(p.models||[]).map(provModelEntry);
+    const accs=(cfg.accounts||[]).map((a,i)=>({a,i})).filter(x=>x.a.provider===p.name);
+    return `
+  <div class="prov-card">
+    <div class="acc-head"><b>平台 ${pi+1}：${esc(p.name||'(未命名)')}</b>
+      <span><button class="btn sm" onclick="fetchModels(${pi}, this)">拉取模型</button>
+      <button class="btn sm" onclick="addAccountTo(${pi})">+ 在此平台下添加账号</button>
+      <button class="btn danger sm" onclick="delProvider(${pi})">删除平台</button></span></div>
+    <div class="frm">
+      <div><label>平台名称 name</label><input value="${esc(p.name)}" oninput="setProv(${pi},'name',this.value)"></div>
+      <div><label>base_url</label><input class="mono" value="${esc(p.base_url)}" oninput="setProv(${pi},'base_url',this.value)"></div>
+    </div>
+    <h4>本平台的模型（可选排名/权重；账号不覆盖 models 时自动继承这里）</h4>
+    <table><tr><th style="width:46%">模型 ID</th><th>priority（小=优先）</th><th>weight（大=多流量）</th><th></th></tr>
+      ${models.map((m,mi)=>`<tr>
+        <td><input class="mono" value="${esc(m.name)}" placeholder="如 sensenova-6.8-flash-lite" oninput="setProvModel(${pi},${mi},'name',this.value)"></td>
+        <td><input type="number" value="${m.priority??''}" placeholder="100" style="width:90px" oninput="setProvModel(${pi},${mi},'priority',this.value)"></td>
+        <td><input type="number" step="0.1" value="${m.weight??''}" placeholder="1" style="width:90px" oninput="setProvModel(${pi},${mi},'weight',this.value)"></td>
+        <td style="width:40px"><button class="btn danger sm" onclick="delProvModel(${pi},${mi})">×</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">（还没有模型，点下方添加）</td></tr>'}
+    </table>
+    <div style="margin-top:6px"><button class="btn sm" onclick="addProvModel(${pi})">+ 添加模型</button></div>
+    <h4>平台下的账号（${accs.length} 个）</h4>
+    <div class="nested-acc">
+      ${accs.map(({a,i})=>`
+      <div class="acc-card">
+        <div class="acc-head"><b>${esc(a.name||'(未命名)')}</b>
+          <span><button class="btn sm" onclick="verifyAccount(${i}, this)">验证</button>
+          <button class="btn danger sm" onclick="delAccount(${i})">删除账号</button></span></div>
+        <div class="muted" style="margin:-4px 0 8px" id="accv-${i}">${accVerifyBadge(i)}</div>
+        <div class="frm">
+          <div><label>账号名 name</label><input value="${esc(a.name)}" oninput="setAcc(${i},'name',this.value)"></div>
+          <div><label>API Key</label><input class="mono" value="${esc(a.api_key)}" oninput="setAcc(${i},'api_key',this.value)"></div>
+          <div><label>账号排名 priority（小=优先，默认100）</label><input type="number" value="${a.priority??100}" oninput="setAcc(${i},'priority',parseFloat(this.value)||100)"></div>
+          <div><label>账号权重 weight（大=多分流量，默认1）</label><input type="number" min="0.01" step="0.1" value="${a.weight??1}" oninput="setAcc(${i},'weight',parseFloat(this.value)||1)"></div>
+          <div class="full"><label>模型覆盖（留空=继承本平台模型；一行一个）</label><textarea rows="2" class="mono" spellcheck="false" oninput="setAcc(${i},'models',this.value.split('\\n').map(s=>s.trim()).filter(Boolean))">${esc((a.models||[]).map(m=>typeof m==='string'?m:m.name).join('\n'))}</textarea></div>
+        </div>
+      </div>`).join('')||'<div class="muted">（此平台下还没有账号）</div>'}
+    </div>
+  </div>`;
+  }).join('');
+}
+function setAcc(i,f,v){cfg.accounts[i][f]=v;markDirty()}
+function addAccountTo(pi){const pn=cfg.providers[pi].name;cfg.accounts=cfg.accounts||[];cfg.accounts.push({name:'acc-'+(cfg.accounts.length+1),provider:pn,api_key:'',models:[]});renderAcc();markDirty()}
+function delAccount(i){if(!confirm('删除账号 '+cfg.accounts[i].name+'？'))return;cfg.accounts.splice(i,1);renderAcc();markDirty()}
+function setProvModel(pi,mi,f,v){
+  const p=cfg.providers[pi]; if(!Array.isArray(p.models)) p.models=[];
+  let m=p.models[mi];
+  if(typeof m==='string'){ m={name:m}; p.models[mi]=m; }
+  if(f==='name'){ m.name=v; }
+  else { v=String(v).trim(); if(v===''){ delete m[f]; } else { m[f]=parseFloat(v); } }
+  markDirty();
+}
+function addProvModel(pi){const p=cfg.providers[pi];if(!Array.isArray(p.models))p.models=[];p.models.push({name:''});renderAcc();markDirty()}
+function delProvModel(pi,mi){cfg.providers[pi].models.splice(mi,1);renderAcc();markDirty()}
+function setProv(i,f,v){
+  if(f==='name'){
+    const old=cfg.providers[i].name;
+    cfg.providers[i][f]=v;
+    // 平台改名时，同步把引用了该旧名的账号的 provider 字段改成新名（否则保存会因悬空引用失败）
+    (cfg.accounts||[]).forEach(a=>{if(a.provider===old)a.provider=v});
+    renderAcc();
+  }else{
+    cfg.providers[i][f]=v;
+  }
+  markDirty();
+}
+function addProvider(){cfg.providers=cfg.providers||[];cfg.providers.push({name:'provider-'+(cfg.providers.length+1),base_url:'https://'});renderAcc();markDirty()}
+function delProvider(i){const used=(cfg.accounts||[]).some(a=>a.provider===cfg.providers[i].name);if(used&&!confirm('有账号在用这个平台，仍删除？'))return;cfg.providers.splice(i,1);renderAcc();markDirty()}
+
+/* ===== 拉取模型（弹窗勾选，而非直接覆盖） ===== */
+let pickerState=null;
+async function fetchModels(pi, btn){
+  const p=cfg.providers[pi]; if(!p||!p.base_url||p.base_url==='https://'){toast('请先填好平台的 base_url',false);return;}
+  const accs=(cfg.accounts||[]).filter(a=>a.provider===p.name);
+  let key=accs.length?accs[0].api_key:'';
+  if(!key){ key=prompt('该平台下暂无账号 key，请输入一个 Token 用于拉取模型列表（仅本次使用，不会保存）：'); if(!key)return; }
+  const old=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spin"></span> 拉取中…';
+  try{
+    const r=await api('/admin/fetch-models',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:p.base_url, api_key:key})});
+    if(!r.ok){ toast('拉取失败: '+((r&&r.message)||('HTTP '+(r&&r.status)||'')), false); return; }
+    openModelPicker(pi, r.models||[]);
+  }catch(e){ toast('拉取失败: '+e.message, false); }
+  finally{ btn.disabled=false; btn.innerHTML=old; }
+}
+function openModelPicker(pi, fetched){
+  const p=cfg.providers[pi];
+  const existing=new Map();
+  (p.models||[]).forEach(m=>{ const e=provModelEntry(m); if(e.name) existing.set(e.name, e); });
+  const checked=new Set([...existing.keys()].filter(n=>fetched.includes(n))); // 已选中的预勾
+  pickerState={pi, fetched, existing, checked};
+  $('mpSub').textContent='平台「'+(p.name||'(未命名)')+'」共拉取 '+fetched.length+' 个模型，勾选要添加的（已选中的会保留 priority/weight）';
+  $('mpFilter').value='';
+  renderPickerList();
+  $('modelPicker').classList.add('on');
+}
+function renderPickerList(){
+  if(!pickerState) return;
+  const q=($('mpFilter').value||'').trim().toLowerCase();
+  const list=pickerState.fetched.filter(n=>!q || n.toLowerCase().includes(q));
+  $('mpList').innerHTML=list.map(n=>{
+    const on=pickerState.checked.has(n)?'checked':'';
+    return `<label class="pick-row"><input type="checkbox" ${on} onchange="togglePickFromEvent(event)"><span class="pn">${esc(n)}</span></label>`;
+  }).join('') || '<div class="muted" style="padding:10px">（无匹配模型）</div>';
+  updatePickerCnt();
+}
+function togglePickFromEvent(e){
+  if(!pickerState) return;
+  const name=e.target.closest('.pick-row').querySelector('.pn').textContent;
+  if(e.target.checked) pickerState.checked.add(name); else pickerState.checked.delete(name);
+  updatePickerCnt();
+}
+function pickAll(v){ if(!pickerState)return; pickerState.fetched.forEach(n=>{ if(v) pickerState.checked.add(n); else pickerState.checked.delete(n); }); renderPickerList(); }
+function updatePickerCnt(){ if(!pickerState)return; $('mpCnt').textContent='已选 '+pickerState.checked.size+' / '+pickerState.fetched.length+' 个'; }
+function closeModelPicker(){ $('modelPicker').classList.remove('on'); pickerState=null; }
+function confirmModelPicker(){
+  if(!pickerState) return;
+  const {pi, fetched, existing, checked}=pickerState;
+  const p=cfg.providers[pi];
+  const result=[];
+  // 1) 按上游顺序加入勾选的模型，保留已有 priority/weight
+  fetched.forEach(n=>{ if(checked.has(n)) result.push(existing.get(n) || {name:n}); });
+  // 2) 保留「平台里原有、但本次上游未返回的自定义模型」，避免被静默删掉
+  const kept=(p.models||[]).map(provModelEntry).filter(e=>e.name && !fetched.includes(e.name));
+  // 3) 移除数 = 原来在上游里、但这次被取消勾选的模型（精确，不受自定义模型干扰）
+  const removed=[...existing.keys()].filter(n=>fetched.includes(n) && !checked.has(n)).length;
+  p.models=result.concat(kept);
+  renderAcc(); markDirty();
+  $('modelPicker').classList.remove('on'); pickerState=null;
+  let msg='已添加 '+result.length+' 个模型';
+  if(kept.length) msg+='（保留 '+kept.length+' 个自定义模型）';
+  if(removed>0) msg+='，移除了 '+removed+' 个未勾选模型';
+  toast(msg);
+}
+
+/* ===== 验证账号（调用网关 /admin/verify-account） ===== */
+async function verifyAccount(i, btn, chat){
+  const a=cfg.accounts[i]; const p=cfg.providers.find(x=>x.name===a.provider);
+  if(!p){ toast('账号所属平台不存在', false); return; }
+  if(!a.api_key){ toast('请先填写 API Key', false); return; }
+  const old=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spin"></span>…';
+  try{
+    const r=await api('/admin/verify-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:p.base_url, api_key:a.api_key, models:a.models||[], chat: chat!==false})});
+    if(!r.ok){ accVerify[i]={status:'err', msg:r.message||('HTTP '+r.status)}; toast('验证失败: '+accVerify[i].msg, false); }
+    else {
+      let msg='key 有效 ✓ 可用模型 '+r.available_count;
+      if(r.missing_models&&r.missing_models.length) msg+='；⚠ 列表中有 '+r.missing_models.length+' 个不在可用列表: '+r.missing_models.join(', ');
+      if(r.chat_ok===true) msg+='；调用测试 ✓ ('+r.chat_model+')';
+      else if(r.chat_ok===false) msg+='；调用测试 ✗: '+(r.chat_message||'');
+      accVerify[i]={status:(r.chat_ok===false?'err':'ok'), msg};
+      toast((accVerify[i].status==='ok'?'验证通过':'验证有问题')+'：'+msg, accVerify[i].status==='ok');
+    }
+  }catch(e){ accVerify[i]={status:'err', msg:e.message}; toast('验证失败: '+e.message, false); }
+  finally{ btn.disabled=false; btn.innerHTML=old; renderAcc(); }
+}
+
+/* ===== 验证全部账号（保存后/手动触发，仅做 key 鉴权级校验，不发真实对话） ===== */
+async function verifyAll(){
+  for(let i=0;i<(cfg.accounts||[]).length;i++){
+    const a=cfg.accounts[i]; const p=cfg.providers.find(x=>x.name===a.provider);
+    if(!p||!a.api_key){ accVerify[i]={status:'unverified', msg:'无 key/平台'}; continue; }
+    try{
+      const r=await api('/admin/verify-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:p.base_url, api_key:a.api_key, models:a.models||[], chat:false})});
+      if(!r.ok) accVerify[i]={status:'err', msg:r.message||('HTTP '+r.status)};
+      else { let m='key 有效 ✓ 可用 '+r.available_count+' 个'; if(r.missing_models&&r.missing_models.length) m+='；⚠ '+r.missing_models.length+' 个模型名不在可用列表'; accVerify[i]={status:'ok', msg:m}; }
+    }catch(e){ accVerify[i]={status:'err', msg:e.message}; }
+  }
+  renderAcc();
+}
+function accVerifyBadge(i){
+  const v=accVerify[i];
+  if(!v||v.status==='unverified') return '● 未验证';
+  if(v.status==='ok') return '<span class="ok">✓ '+esc(v.msg||'有效')+'</span>';
+  return '<span class="err">✗ '+esc(v.msg||'无效')+'</span>';
+}
+
+/* ===== 规则 ===== */
+function renderRule(){
+  $('r-port').value=cfg.port??8080;$('r-host').value=cfg.host||'127.0.0.1';
+  $('r-rotation').value=cfg.rotation||'on_failure';
+  $('r-cooldown').value=cfg.cooldown_ms??30000;$('r-timeout').value=cfg.request_timeout_ms??120000;
+  $('r-max').value=cfg.max_attempts??10;$('r-lkey').value=cfg.local_api_key||'';
+  $('r-defmodel').value=cfg.default_model||'';
+  const fo=cfg.failover_on||['rate_limit','timeout','server_error'];
+  $('fo-rate').checked=fo.includes('rate_limit');$('fo-timeout').checked=fo.includes('timeout');$('fo-server').checked=fo.includes('server_error');
+  $('r-fallback').value=JSON.stringify(cfg.model_fallback||{},null,2);
+  $('r-alias').value=JSON.stringify(cfg.model_alias||{},null,2);
+  $('r-persist').checked=!!cfg.persist_stats;
+  const hc=cfg.health_check||{};
+  $('r-hc-en').checked=!!hc.enabled;
+  $('r-hc-int').value=hc.interval_ms||60000;
+  $('r-hc-path').value=hc.path||'/v1/models';
+  $('r-hc-to').value=hc.timeout_ms||10000;
+  $('r-logfile').value=cfg.request_log_file||'';
+  ['r-port','r-host','r-rotation','r-cooldown','r-timeout','r-max','r-defmodel','r-lkey','r-fallback','r-alias','r-persist','r-hc-en','r-hc-int','r-hc-path','r-hc-to','r-logfile'].forEach(id=>$(id).oninput=markDirty);
+  ['fo-rate','fo-timeout','fo-server','r-persist','r-hc-en'].forEach(id=>$(id).onchange=markDirty);
+}
+
+/* ===== 模型优先级（全局 model_order） ===== */
+function modelsOfAccount(a){
+  const p=cfg.providers.find(x=>x.name===a.provider);
+  if(Array.isArray(a.models)&&a.models.length) return a.models.map(m=>typeof m==='string'?m:m.name);
+  if(p&&Array.isArray(p.models)) return p.models.map(m=>typeof m==='string'?m:m.name);
+  return [];
+}
+function platformsForModel(m){
+  const set=new Set();
+  (cfg.accounts||[]).forEach(a=>{ if(modelsOfAccount(a).includes(m)) set.add(a.provider); });
+  return [...set].map(x=>`<span class="tag prov">${esc(x)}</span>`).join('')||'<span class="muted">（无账号服务）</span>';
+}
+function renderOrder(){
+  if(!Array.isArray(cfg.model_order)) cfg.model_order=[];
+  const list=cfg.model_order;
+  if(!list.length){
+    $('orderList').innerHTML='<div class="ord-empty">列表为空。点「导入全部模型」自动收集所有平台的模型并排序，或「+ 添加模型」手动加入。</div>';
+    return;
+  }
+  $('orderList').innerHTML=list.map((m,i)=>`
+    <div class="ord-row" draggable="true" data-i="${i}" ondragstart="ordDrag(event,${i})" ondragover="ordOver(event,this)" ondragleave="ordLeave(this)" ondrop="ordDrop(event,${i})">
+      <span class="ord-idx">${i+1}</span>
+      <span class="ord-name mono">${esc(m)}</span>
+      <span class="ord-prov">${platformsForModel(m)}</span>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="ordUp(${i})" ${i===0?'disabled':''}>↑</button>
+      <button class="btn sm" onclick="ordDown(${i})" ${i===list.length-1?'disabled':''}>↓</button>
+      <button class="btn danger sm" onclick="ordDel(${i})">×</button>
+    </div>`).join('');
+}
+function ordUp(i){ if(i>0){const l=cfg.model_order;[l[i-1],l[i]]=[l[i],l[i-1]];renderOrder();markDirty()} }
+function ordDown(i){ const l=cfg.model_order; if(i<l.length-1){[l[i+1],l[i]]=[l[i],l[i+1]];renderOrder();markDirty()} }
+function ordDel(i){ cfg.model_order.splice(i,1);renderOrder();markDirty() }
+function addToOrder(){
+  const m=prompt('输入要加入优先级列表的模型 ID（需已存在于某平台的模型中）：');
+  if(!m)return; m=m.trim(); if(!m)return;
+  cfg.model_order=cfg.model_order||[]; if(cfg.model_order.includes(m)){toast('已在列表中');return;}
+  cfg.model_order.push(m);renderOrder();markDirty();
+}
+function importAllModels(){
+  const all=new Set();
+  (cfg.providers||[]).forEach(p=>(p.models||[]).forEach(m=>all.add(typeof m==='string'?m:m.name)));
+  (cfg.accounts||[]).forEach(a=>(a.models||[]).forEach(m=>all.add(typeof m==='string'?m:m.name)));
+  if(!all.size){toast('没有可导入的模型',false);return;}
+  cfg.model_order=[...all];renderOrder();markDirty();toast('已导入 '+cfg.model_order.length+' 个模型，请调整顺序');
+}
+let dragIdx=null;
+function ordDrag(e,i){dragIdx=i;e.dataTransfer.effectAllowed='move';}
+function ordOver(e,el){e.preventDefault();el.classList.add('dragover');}
+function ordLeave(el){el.classList.remove('dragover');}
+function ordDrop(e,i){e.preventDefault();const el=e.currentTarget;if(el)el.classList.remove('dragover');if(dragIdx===null||dragIdx===i){dragIdx=null;return;}const l=cfg.model_order;const [x]=l.splice(dragIdx,1);l.splice(i,0,x);dragIdx=null;renderOrder();markDirty();}
+
+/* ===== 分层路由 model_routes（层间降级 + 层内加权） ===== */
+function collectAllModels(){
+  const s=new Set();
+  (cfg.providers||[]).forEach(p=>(p.models||[]).forEach(m=>s.add(typeof m==='string'?m:m.name)));
+  (cfg.accounts||[]).forEach(a=>(a.models||[]).forEach(m=>s.add(typeof m==='string'?m:m.name)));
+  return [...s].filter(Boolean);
+}
+// 某平台可用的模型（平台自带 models + 该平台下账号自定义的 models）
+function modelsOfProvider(pname){
+  const set=new Set();
+  (cfg.providers||[]).forEach(p=>{ if(p.name===pname) (p.models||[]).forEach(m=>set.add(typeof m==='string'?m:m.name)); });
+  (cfg.accounts||[]).forEach(a=>{ if(a.provider===pname) (a.models||[]).forEach(m=>set.add(typeof m==='string'?m:m.name)); });
+  return [...set].filter(Boolean);
+}
+function normEntry(e){
+  if(typeof e==='string') return {model:e,provider:'',weight:1};
+  return {model:(e&&e.model)||'',provider:(e&&e.provider)||'',weight:(e&&typeof e.weight==='number'&&e.weight>0)?e.weight:1};
+}
+function renderTiers(){
+  cfg.model_routes=Array.isArray(cfg.model_routes)?cfg.model_routes:[];
+  $('r-healthaware').checked = cfg.health_aware!==false;
+  const tiers=cfg.model_routes;
+  const allModels=collectAllModels();
+  $('tierList').innerHTML=(
+    tiers.length ? tiers.map((tier,ti)=>`
+      <div class="tier-card">
+        <div class="acc-head"><b>第 ${ti+1} 层${ti===0?'（优先）':''}</b>
+          <span><button class="btn sm" onclick="addTierEntry(${ti})">+ 添加模型</button>
+          <button class="btn sm" onclick="moveTier(${ti},-1)" title="上移本层">↑ 上移</button>
+          <button class="btn sm" onclick="moveTier(${ti},1)" title="下移本层">↓ 下移</button>
+          <button class="btn danger sm" onclick="delTier(${ti})">删除本层</button></span></div>
+        <table><tr><th style="width:34%">① 先选平台</th><th style="width:40%">② 再选该平台的模型</th><th style="width:80px">权重</th><th style="width:96px">排序/删除</th></tr>
+        ${(tier||[]).map((e,ei)=>{const en=normEntry(e);
+            const pv=en.provider||'';
+            const mopts=(pv?modelsOfProvider(pv):allModels).slice().sort((a,b)=>a.localeCompare(b));
+            return `
+          <tr>
+            <td><select onchange="onTierProvider(${ti},${ei},this.value)">
+              <option value=""${!pv?' selected':''}>不限（所有平台按权重分摊）</option>
+              ${(cfg.providers||[]).map(p=>`<option value="${esc(p.name)}"${pv===p.name?' selected':''}>${esc(p.name)}</option>`).join('')}
+            </select></td>
+            <td><select class="mono" onchange="setTierEntry(${ti},${ei},'model',this.value)">
+              <option value="">— 选择${pv?'「'+esc(pv)+'」的':''}模型 —</option>
+              ${mopts.map(m=>`<option value="${esc(m)}"${en.model===m?' selected':''}>${esc(m)}</option>`).join('')}
+            </select></td>
+            <td><input type="number" min="0.1" step="0.5" value="${en.weight}" oninput="setTierEntry(${ti},${ei},'weight',parseFloat(this.value)||1)"></td>
+            <td><button class="btn sm" onclick="moveTierEntry(${ti},${ei},-1)" title="本层上移">↑</button> <button class="btn sm" onclick="moveTierEntry(${ti},${ei},1)" title="本层下移">↓</button> <button class="btn danger sm" onclick="delTierEntry(${ti},${ei})" title="删除本行">×</button></td>
+          </tr>`;}).join('')||'<tr><td colspan="4" class="muted">（本层还没有模型，点「+ 添加模型」）</td></tr>'}
+        </table>
+      </div>`).join('')
+    : '<div class="ord-empty">还没有分层。点「+ 添加层」开始，或用下方「↑ 转为分层」把现有 model_order 搬上来。</div>');
+}
+function setHealthAware(v){cfg.health_aware=!!v;markDirty()}
+function addTier(){cfg.model_routes.push([{model:'',provider:'',weight:1}]);renderTiers();markDirty()}
+function delTier(ti){cfg.model_routes.splice(ti,1);renderTiers();markDirty()}
+function moveTier(ti,d){const t=cfg.model_routes,j=ti+d;if(j<0){toast('已是第 1 层（最优先）');return;}if(j>=t.length){toast('已是最后一层');return;}[t[ti],t[j]]=[t[j],t[ti]];renderTiers();markDirty()}
+function moveTierEntry(ti,ei,d){const t=cfg.model_routes[ti],j=ei+d;if(j<0){toast('已是本层第一个模型');return;}if(j>=t.length){toast('已是本层最后一个模型');return;}[t[ei],t[j]]=[t[j],t[ei]];renderTiers();markDirty()}
+function addTierEntry(ti){cfg.model_routes[ti].push({model:'',provider:'',weight:1});renderTiers();markDirty()}
+function delTierEntry(ti,ei){cfg.model_routes[ti].splice(ei,1);renderTiers();markDirty()}
+function setTierEntry(ti,ei,f,v){let e=cfg.model_routes[ti][ei];if(typeof e==='string'){e={model:e};cfg.model_routes[ti][ei]=e;}e[f]=v;markDirty()}
+// 切换平台：若已选模型不属于该平台（且平台非“不限”），清空模型强制重选
+function onTierProvider(ti,ei,pv){
+  setTierEntry(ti,ei,'provider',pv);
+  const e=cfg.model_routes[ti][ei];
+  if(pv && e.model && !modelsOfProvider(pv).includes(e.model)) e.model='';
+  renderTiers();
+}
+function orderToTiers(){
+  if(!(cfg.model_order||[]).length){toast('model_order 为空，无可转换',false);return;}
+  cfg.model_routes=cfg.model_order.map(m=>[{model:m,provider:'',weight:1}]);
+  renderTiers();markDirty();toast('已转为 '+cfg.model_routes.length+' 层（每层一个模型），可再合并调权重');
+}
+
+/* ===== 测试 ===== */
+let playEntries=[]; // 下拉框每项对应的 {provider, model}，value=下标，避免模型名含特殊字符时解析出错
+async function loadPlayModels(){
+  try{
+    const m=await api('/v1/models');
+    const byProv=new Map(), aliases=[];
+    for(const x of m.data){
+      if(x.alias_of!==undefined){aliases.push(x);continue}
+      const provs=new Set((x.served_by||[]).map(s=>s.split('/')[0]));
+      for(const p of provs){if(!byProv.has(p))byProv.set(p,[]);byProv.get(p).push(x.id)}
+    }
+    const provs=[...byProv.keys()].sort();
+    playEntries=[];let html='';
+    for(const p of provs){
+      const models=[...new Set(byProv.get(p))].sort();
+      html+=`<optgroup label="${esc(p)}">`+models.map(md=>{playEntries.push({provider:p,model:md});return `<option value="${playEntries.length-1}">${esc(md)}</option>`}).join('')+`</optgroup>`;
+    }
+    if(aliases.length){html+=`<optgroup label="别名">`+aliases.map(x=>{playEntries.push({provider:'',model:x.id});return `<option value="${playEntries.length-1}">${esc(x.id)} → ${esc(x.alias_of)}</option>`}).join('')+`</optgroup>`;}
+    $('t-model').innerHTML=html||'<option>（无模型）</option>';
+  }catch(e){playEntries=[];$('t-model').innerHTML='<option>（加载失败）</option>'}
+}
+async function testModel(){
+  const sel=playEntries[parseInt($('t-model').value)];
+  const model=sel?sel.model:$('t-model').value, provider=sel?sel.provider:'';
+  const prompt=$('t-prompt').value;
+  const btn=$('t-send');btn.disabled=true;$('t-meta').innerHTML='<span class="spin"></span> 请求中…';$('t-result').style.display='none';
+  const t0=Date.now();
+  try{
+    const body={model,messages:[{role:'user',content:prompt}]};
+    if(provider)body.provider=provider; // 显式指定平台，确保测试的是所选平台的模型
+    const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer ui'},body:JSON.stringify(body)});
+    const lat=Date.now()-t0,acc=r.headers.get('x-gateway-account'),prov=r.headers.get('x-gateway-provider');
+    const j=await r.json();
+    const content=j.choices?.[0]?.message?.content||JSON.stringify(j.error||j);
+    $('t-result').style.display='block';$('t-result').className=r.ok?'result-ok':'result-err';
+    $('t-result').textContent=content;
+    $('t-meta').innerHTML=`<span class="${r.ok?'ok':'err'}">HTTP ${r.status}</span> · ${lat}ms · <span class="tag prov">${esc(prov||'-')}</span> <span class="tag">${esc(acc||'-')}</span>`;
+    loadStatus();loadLogs();
+  }catch(e){$('t-meta').innerHTML='<span class="err">失败: '+esc(e.message)+'</span>'}
+  btn.disabled=false;
+}
+
+/* ===== 日志 ===== */
+async function loadLogs(){
+  try{
+    const d=await api('/admin/requests');
+    const rows=d.data||[];
+    const trunc=rows.filter(e=>e.truncated).length;
+    const fr={}; rows.forEach(e=>{ if(e.finish_reason) fr[e.finish_reason]=(fr[e.finish_reason]||0)+1; });
+    $('logStat').innerHTML = rows.length
+      ? (trunc?`<span class="tag" style="background:#fce8e6;color:#a32d2d">截断 ${trunc}</span>`:'') +
+        Object.entries(fr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join('')
+      : '';
+    $('logList').innerHTML='<table><tr><th>时间</th><th>请求模型</th><th>实际模型</th><th>路由</th><th>状态</th><th>耗时</th><th>尝试</th><th>结束原因</th><th>输出</th><th>思考</th></tr>'+
+      (rows.length?rows.map(e=>{
+        const frTxt = e.finish_reason || '-';
+        const frCls = e.truncated ? 'err' : (e.finish_reason==='stop' ? 'ok' : 'muted');
+        return `<tr><td class="muted">${(e.ts||'').slice(11,19)}</td><td class="mono">${esc(e.client_model||'-')}</td>
+      <td class="mono">${esc(e.model||'-')}</td><td><span class="tag prov">${esc(e.provider||'-')}</span> <span class="tag">${esc(e.account||'-')}</span></td>
+      <td class="${e.status===200?'ok':(e.status===502?'err':'warn')}">${e.status}</td><td>${e.latency_ms}ms</td><td>${e.attempts||1}</td>
+      <td class="${frCls}">${esc(frTxt)}${e.truncated?' <b>截断</b>':''}</td>
+      <td class="muted">${e.completion_tokens??'-'}</td><td class="muted">${e.reasoning_tokens??'-'}</td></tr>`;
+      }).join(''):'<tr><td colspan="10" class="muted">暂无记录</td></tr>')+'</table>';
+  }catch(e){}
+}
+function startLogTimer(){stopLogTimer();logTimer=setInterval(()=>{if($('logAuto').checked)loadLogs()},3000)}
+function stopLogTimer(){if(logTimer){clearInterval(logTimer);logTimer=null}}
+
+/* ===== 保存 ===== */
+async function saveConfig(){
+  // 收集规则页
+  cfg.port=parseInt($('r-port').value)||8080;cfg.host=$('r-host').value||'127.0.0.1';
+  cfg.rotation=$('r-rotation').value;
+  cfg.cooldown_ms=parseInt($('r-cooldown').value)||30000;
+  cfg.request_timeout_ms=parseInt($('r-timeout').value)||120000;
+  cfg.max_attempts=parseInt($('r-max').value)||10;
+  cfg.default_model=$('r-defmodel').value.trim()||'';
+  cfg.local_api_key=$('r-lkey').value||'';
+  cfg.failover_on=['fo-rate','fo-timeout','fo-server'].filter(id=>$(id).checked).map(id=>$(id).value);
+  cfg.persist_stats=!!$('r-persist').checked;
+  cfg.request_log_file=$('r-logfile').value.trim()||'';
+  const hc={enabled:!!$('r-hc-en').checked,interval_ms:parseInt($('r-hc-int').value)||60000,path:$('r-hc-path').value||'/v1/models',timeout_ms:parseInt($('r-hc-to').value)||10000};
+  cfg.health_check=hc.enabled?hc:false;
+  try{cfg.model_fallback=JSON.parse($('r-fallback').value||'{}')}catch(e){return toast('model_fallback JSON 错误: '+e.message,false)}
+  try{cfg.model_alias=JSON.parse($('r-alias').value||'{}')}catch(e){return toast('model_alias JSON 错误: '+e.message,false)}
+  if(!cfg.accounts||!cfg.accounts.length)return toast('至少保留一个账号',false);
+  for(const a of cfg.accounts){if(!a.api_key)return toast('账号 '+a.name+' 缺少 api_key',false)}
+  const btn=$('saveBtn');btn.disabled=true;
+  try{
+    const r=await api('/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg,null,2)});
+    dirty=false;toast(`已保存并热加载：${r.providers} 平台 / ${r.accounts} 账号 / ${r.models} 模型`);
+    $('hstat').innerHTML='<span class="ok">● 已保存</span>';loadStatus();loadPlayModels();verifyAll();
+  }catch(e){toast('保存失败: '+e.message,false);btn.disabled=false}
+}
+loadAll();
+</script>
+
+<!-- 拉取模型：勾选弹窗 -->
+<div class="modal-mask" id="modelPicker" onclick="if(event.target===this)closeModelPicker()">
+  <div class="modal">
+    <div class="modal-head">
+      <div><b>选择要添加的模型</b><div class="modal-sub" id="mpSub"></div></div>
+      <button class="btn sm" onclick="closeModelPicker()">✕</button>
+    </div>
+    <div class="modal-tools">
+      <input id="mpFilter" placeholder="搜索模型名…" oninput="renderPickerList()">
+      <button class="btn sm" onclick="pickAll(true)">全选</button>
+      <button class="btn sm" onclick="pickAll(false)">全不选</button>
+    </div>
+    <div class="modal-list" id="mpList"></div>
+    <div class="modal-foot">
+      <span class="cnt" id="mpCnt"></span>
+      <button class="btn sm" onclick="closeModelPicker()">取消</button>
+      <button class="btn pri sm" onclick="confirmModelPicker()">确定添加</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "port": 8086,
+  "host": "127.0.0.1",
+  "rotation": "every_request",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 30000,
+  "request_timeout_ms": 10000,
+  "max_attempts": 10,
+  "model_fallback": {},
+  "model_alias": {},
+  "request_log_file": "",
+  "providers": [
+    { "name": "provA", "base_url": "http://127.0.0.1:9091" },
+    { "name": "provB", "base_url": "http://127.0.0.1:9092" }
+  ],
+  "accounts": [
+    { "name": "acc-W1", "provider": "provA", "api_key": "k-1", "priority": 100, "weight": 3, "models": ["shared-model"] },
+    { "name": "acc-W2", "provider": "provB", "api_key": "k-2", "priority": 100, "weight": 1, "models": ["shared-model"] }
+  ]
+}

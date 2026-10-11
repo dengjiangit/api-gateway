@@ -1,0 +1,14 @@
+{
+  "name": "sensenova-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地多账号 SenseNova(日日新) 网关：OpenAI 兼容、多账号轮询、429/超时/5xx 立即切换、冷却与模型回退。",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "bash start.sh",
+    "dev": "node server.js",
+    "restart": "bash start.sh"
+  }
+}

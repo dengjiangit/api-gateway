@@ -1,0 +1,73 @@
+{
+  "port": 8088,
+  "host": "127.0.0.1",
+
+  "rotation": "on_failure",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 30000,
+  "request_timeout_ms": 120000,
+  "max_attempts": 10,
+
+  "model_fallback": {
+    "deepseek-v4-flash": ["sensenova-6.8-flash-lite"],
+    "Qwen/Qwen3-32B-Chat": ["deepseek-ai/DeepSeek-V3"],
+    "qwen-plus": ["qwen-turbo"]
+  },
+
+  "local_api_key": "",
+  "default_model": "sensenova-6.8-flash-lite",
+
+  "persist_stats": false,
+  "health_check": false,
+  "request_log_file": "",
+
+  "providers": [
+    {
+      "name": "sensenova",
+      "base_url": "https://token.sensenova.cn",
+      "models": [
+        { "name": "sensenova-6.8-flash-lite" },
+        { "name": "deepseek-v4-flash", "priority": 1, "weight": 3 },
+        { "name": "glm-5.2", "weight": 2 }
+      ]
+    },
+    {
+      "name": "modelscope",
+      "base_url": "https://api-inference.modelscope.cn/v1",
+      "models": [
+        "Qwen/Qwen3-32B-Chat",
+        { "name": "deepseek-ai/DeepSeek-V3", "priority": 2 }
+      ]
+    },
+    { "name": "dashscope",  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1", "models": ["qwen-plus", "qwen-turbo"] },
+    { "name": "deepseek",   "base_url": "https://api.deepseek.com/v1", "models": ["deepseek-chat", "deepseek-reasoner"] },
+    { "name": "moonshot",   "base_url": "https://api.moonshot.cn/v1", "models": ["moonshot-v1-8k"] },
+    { "name": "siliconflow","base_url": "https://api.siliconflow.cn/v1", "models": ["Qwen/Qwen2.5-7B-Instruct"] }
+  ],
+
+  "accounts": [
+    {
+      "name": "sns-acc1",
+      "provider": "sensenova",
+      "api_key": "sk-REPLACE_WITH_SENSENOVA_KEY_1",
+      "priority": 1,
+      "weight": 3
+    },
+    {
+      "name": "sns-acc2",
+      "provider": "sensenova",
+      "api_key": "sk-REPLACE_WITH_SENSENOVA_KEY_2"
+    },
+    {
+      "name": "ms-acc1",
+      "provider": "modelscope",
+      "api_key": "ms-REPLACE_WITH_MODELSCOPE_KEY_1",
+      "models": ["Qwen/Qwen3-32B-Chat", "Qwen/Qwen3-Coder-480B-A35B-Instruct"]
+    },
+    {
+      "name": "ds-acc1",
+      "provider": "deepseek",
+      "api_key": "sk-REPLACE_WITH_DEEPSEEK_KEY"
+    }
+  ]
+}

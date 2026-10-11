@@ -1,0 +1,34 @@
+{
+  "port": 8085,
+  "host": "127.0.0.1",
+  "rotation": "on_failure",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 30000,
+  "request_timeout_ms": 10000,
+  "max_attempts": 10,
+  "model_fallback": {},
+  "model_alias": {},
+  "default_model": "model-b-only",
+  "providers": [
+    {
+      "name": "provA",
+      "base_url": "http://127.0.0.1:9091",
+      "models": [
+        { "name": "shared-model", "priority": 1 },
+        { "name": "model-a-only" }
+      ]
+    },
+    {
+      "name": "provB",
+      "base_url": "http://127.0.0.1:9092",
+      "models": [
+        { "name": "shared-model", "priority": 2 },
+        { "name": "model-b-only" }
+      ]
+    }
+  ],
+  "accounts": [
+    { "name": "acc-A", "provider": "provA", "api_key": "k-a" },
+    { "name": "acc-B", "provider": "provB", "api_key": "k-b" }
+  ]
+}

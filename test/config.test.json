@@ -1,0 +1,20 @@
+{
+  "port": 8081,
+  "host": "127.0.0.1",
+  "upstream": "http://127.0.0.1:9090",
+  "rotation": "every_request",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 5000,
+  "request_timeout_ms": 5000,
+  "max_attempts": 10,
+  "model_fallback": {
+    "deepseek-v4-flash": ["sensenova-6.8-flash-lite", "glm-5.2"],
+    "glm-5.2": ["sensenova-6.8-flash-lite"]
+  },
+  "local_api_key": "",
+  "accounts": [
+    { "name": "acc-1", "api_key": "fake-key-1", "models": ["sensenova-6.8-flash-lite", "deepseek-v4-flash", "glm-5.2"] },
+    { "name": "acc-2", "api_key": "fake-key-2", "models": ["sensenova-6.8-flash-lite", "deepseek-v4-flash", "glm-5.2"] },
+    { "name": "acc-3", "api_key": "fake-key-3", "models": ["sensenova-6.8-flash-lite", "glm-5.2"] }
+  ]
+}
