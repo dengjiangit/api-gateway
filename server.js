@@ -603,7 +603,7 @@ async function completeOk(res, upstreamRes, pick, ctrl, ctx) {
   pushLog({
     client_model: ctx.requestedModel, model: ctx.modelName, provider: pick.provider, account: pick.name,
     status: ctx.status, latency_ms: Date.now() - ctx.reqStart, attempts: ctx.totalAttempts,
-    outcome: 'ok', tier: ctx.ti + 1,
+    outcome: ctx.status >= 400 ? 'passthrough' : 'ok', tier: ctx.ti + 1,
     finish_reason: cap.finish_reason,
     completion_tokens: cap.completion_tokens,
     prompt_tokens: cap.prompt_tokens,
@@ -736,6 +736,40 @@ async function handleProxy(req, res, bodyText) {
         continue;
       }
 
+      // 上游 4xx（以及未启用切换的 5xx）：
+      // - 内容审核拒绝（data_inspection_failed）：failover_on 含 "content_blocked" 时自动换下一个候选
+      //   （同模型的其他平台账号 → 下一层回退模型），利用各平台审核尺度差异；审核拒绝不是账号故障，不进冷却。
+      // - 其余原样透传给客户端（内容/参数问题，切了也没用），日志记 passthrough 而不是 ok。
+      if (status >= 400) {
+        let errBody = '';
+        try { errBody = await upstreamRes.text(); } catch {}
+        const blocked = /data_inspection_failed|inappropriate content/i.test(errBody);
+        if (blocked && triggers.has('content_blocked')) {
+          lastError = { reason: 'content_blocked', status, account: pick.name, provider: pick.provider, model: modelName };
+          log(`  -> ${status} content_blocked (${Date.now() - t0}ms) on ${pick.provider}/${pick.name} for ${modelName}  ->  SWITCH`);
+          continue;
+        }
+        res.statusCode = status;
+        const ct = upstreamRes.headers && upstreamRes.headers.get && upstreamRes.headers.get('content-type');
+        res.setHeader('Content-Type', ct || 'application/json');
+        if (blocked) {
+          res.setHeader('x-gateway-note', 'upstream-content-blocked');
+          try {
+            const j = JSON.parse(errBody);
+            j.hint = '上游内容审核拦截（DataInspectionFailed），非网关/账号故障；可改写内容重试，或在 failover_on 加 "content_blocked" 让网关自动换平台。';
+            errBody = JSON.stringify(j);
+          } catch { /* 非 JSON 错误体则原样透传 */ }
+        }
+        log(`  -> ${status} passthrough${blocked ? ' (content_blocked, 未启用切换)' : ''} (${Date.now() - t0}ms) on ${pick.provider}/${pick.name} for ${modelName}`);
+        pushLog({
+          client_model: requestedModel, model: modelName, provider: pick.provider, account: pick.name,
+          status, latency_ms: Date.now() - reqStart, attempts: totalAttempts,
+          outcome: 'passthrough', tier: ti + 1, note: blocked ? 'content_blocked' : null,
+        });
+        res.end(errBody);
+        return;
+      }
+
       noteSuccess(pick.name);
       log(`  -> ${status} OK (${Date.now() - t0}ms) on ${pick.provider}/${pick.name} for ${modelName}`);
       return await completeOk(res, upstreamRes, pick, ctrl, {
@@ -758,7 +792,7 @@ async function handleProxy(req, res, bodyText) {
   res.end(JSON.stringify({
     error: {
       type: 'gateway_all_failed',
-      message: '请求的 model 与所有回退 model 的账号都失败（限流/超时/5xx），请加账号、配置回退或等冷却结束。',
+      message: '请求的 model 与所有回退 model 的账号都失败（限流/超时/5xx/内容审核），请加账号、配置回退或等冷却结束。',
       hint: '查看 http://' + config.host + ':' + config.port + '/admin/status',
       last_error: lastError,
     },

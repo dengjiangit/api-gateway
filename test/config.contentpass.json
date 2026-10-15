@@ -1,0 +1,26 @@
+{
+  "port": 9400,
+  "host": "127.0.0.1",
+  "rotation": "on_failure",
+  "failover_on": ["rate_limit", "timeout", "server_error"],
+  "cooldown_ms": 1000,
+  "request_timeout_ms": 10000,
+  "max_attempts": 10,
+  "model_fallback": {},
+  "model_alias": {},
+  "model_order": [],
+  "model_routes": [],
+  "default_model": "",
+  "local_api_key": "",
+  "persist_stats": false,
+  "health_check": false,
+  "request_log_file": "",
+  "providers": [
+    { "name": "modA", "base_url": "http://127.0.0.1:9401", "models": ["test-model"] },
+    { "name": "modB", "base_url": "http://127.0.0.1:9402", "models": ["test-model"] }
+  ],
+  "accounts": [
+    { "name": "acc-A", "provider": "modA", "api_key": "sk-fake-a", "models": ["test-model"], "priority": 1 },
+    { "name": "acc-B", "provider": "modB", "api_key": "sk-fake-b", "models": ["test-model"], "priority": 2 }
+  ]
+}

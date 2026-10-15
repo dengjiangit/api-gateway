@@ -147,6 +147,7 @@ pre{background:var(--code);border:1px solid var(--border);border-radius:8px;padd
       <label><input type="checkbox" id="fo-rate" value="rate_limit"> rate_limit（429 限流）</label>
       <label><input type="checkbox" id="fo-timeout" value="timeout"> timeout（超时）</label>
       <label><input type="checkbox" id="fo-server" value="server_error"> server_error（5xx）</label>
+      <label><input type="checkbox" id="fo-content" value="content_blocked"> content_blocked（内容审核拒绝时自动换平台，默认关）</label>
     </div>
   </div>
   <div class="card" style="margin-top:12px"><label>统计持久化 persist_stats <span class="muted">（启用后定期落盘，重启不丢计数/日志）</span></label>
@@ -459,7 +460,7 @@ function renderRule(){
   $('r-max').value=cfg.max_attempts??10;$('r-lkey').value=cfg.local_api_key||'';
   $('r-defmodel').value=cfg.default_model||'';
   const fo=cfg.failover_on||['rate_limit','timeout','server_error'];
-  $('fo-rate').checked=fo.includes('rate_limit');$('fo-timeout').checked=fo.includes('timeout');$('fo-server').checked=fo.includes('server_error');
+  $('fo-rate').checked=fo.includes('rate_limit');$('fo-timeout').checked=fo.includes('timeout');$('fo-server').checked=fo.includes('server_error');$('fo-content').checked=fo.includes('content_blocked');
   $('r-fallback').value=JSON.stringify(cfg.model_fallback||{},null,2);
   $('r-alias').value=JSON.stringify(cfg.model_alias||{},null,2);
   $('r-persist').checked=!!cfg.persist_stats;
@@ -676,7 +677,7 @@ async function saveConfig(){
   cfg.max_attempts=parseInt($('r-max').value)||10;
   cfg.default_model=$('r-defmodel').value.trim()||'';
   cfg.local_api_key=$('r-lkey').value||'';
-  cfg.failover_on=['fo-rate','fo-timeout','fo-server'].filter(id=>$(id).checked).map(id=>$(id).value);
+  cfg.failover_on=['fo-rate','fo-timeout','fo-server','fo-content'].filter(id=>$(id).checked).map(id=>$(id).value);
   cfg.persist_stats=!!$('r-persist').checked;
   cfg.request_log_file=$('r-logfile').value.trim()||'';
   const hc={enabled:!!$('r-hc-en').checked,interval_ms:parseInt($('r-hc-int').value)||60000,path:$('r-hc-path').value||'/v1/models',timeout_ms:parseInt($('r-hc-to').value)||10000};

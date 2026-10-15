@@ -144,7 +144,10 @@ node server.js
   └── 429  ─► 账号进冷却（默认 30s），立即换下一个账号
   └── 超时  ─► 账号进冷却，立即换下一个账号
   └── 5xx   ─► 账号进冷却，立即换下一个账号
-  └── 400/401/403/404 ─► 不切，原样回写（你/模型名/参数的问题，切了也没用）
+  └── 404   ─► 该平台没有此模型，切下一个候选
+  └── 400/401/403 ─► 不切，原样回写（内容/参数问题，切了也没用）；
+                      其中内容审核类（data_inspection_failed）可开 failover_on 的
+                      "content_blocked" 自动换下一个候选（跨账号/跨平台），默认关
   │
   ▼
 当前 model 池所有账号都失败？
@@ -176,7 +179,7 @@ node server.js
 | `default_model` | `""` | 客户端请求的模型不存在（或缺 model 字段）时自动路由到该模型，而不是返回 400 |
 | `model_routes` | `[]` | **强制路由覆盖（慎用）**：非空时**完全接管所有请求的路由**，忽略客户端请求的 model 与 `model_fallback` 回退链。格式为「层」的数组，每层是若干 `{model, provider, weight}`（或字符串模型名）；同层内按权重选，层间串行降级。⚠️ **坑**：列出的模型必须真实存在于某账号的 `models` 池里，否则该层 0 候选 → 所有请求直接 502（`last_error:null`、`attempts:0`）。一般不要用它，加模型请走 `providers[].models` / 账号 `models`。 |
 | `rotation` | `on_failure` | `on_failure` 默认粘性（一个账号用到它 429/超时/5xx 才切）；`every_request` 每次请求换号 |
-| `failover_on` | `["rate_limit","timeout","server_error"]` | 哪些情况触发立即切换。`429`=限流，`timeout`=超时，`server_error`=5xx |
+| `failover_on` | `["rate_limit","timeout","server_error"]` | 哪些情况触发立即切换。`rate_limit`=429 限流，`timeout`=超时，`server_error`=5xx，`content_blocked`=上游内容审核拒绝（如 ModelScope/DashScope 的 `data_inspection_failed`，**默认关**；开启后自动换下一个候选，利用各平台审核尺度差异，审核拒绝不进冷却） |
 | `cooldown_ms` | `30000` | 失败账号冷却时长（期间不再选它，除非池子全冷） |
 | `request_timeout_ms` | `120000` | 单次上游请求超时（流式也按这个） |
 | `max_attempts` | `10` | 单次请求最多尝试几次（账号×回退 model 的笛卡尔积上限） |
