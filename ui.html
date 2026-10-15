@@ -286,7 +286,7 @@ function renderAcc(){
       <button class="btn sm" onclick="addAccountTo(${pi})">+ 在此平台下添加账号</button>
       <button class="btn danger sm" onclick="delProvider(${pi})">删除平台</button></span></div>
     <div class="frm">
-      <div><label>平台名称 name</label><input value="${esc(p.name)}" oninput="setProv(${pi},'name',this.value)"></div>
+      <div><label>平台名称 name</label><input data-fkey="prov-${pi}-name" value="${esc(p.name)}" oninput="setProv(${pi},'name',this.value)"></div>
       <div><label>base_url</label><input class="mono" value="${esc(p.base_url)}" oninput="setProv(${pi},'base_url',this.value)"></div>
     </div>
     <h4>本平台的模型（可选排名/权重；账号不覆盖 models 时自动继承这里）</h4>
@@ -331,13 +331,24 @@ function setProvModel(pi,mi,f,v){
 }
 function addProvModel(pi){const p=cfg.providers[pi];if(!Array.isArray(p.models))p.models=[];p.models.push({name:''});renderAcc();markDirty()}
 function delProvModel(pi,mi){cfg.providers[pi].models.splice(mi,1);renderAcc();markDirty()}
+/* 平台改名会整树重建（账号按平台名重新分组），重渲染后恢复焦点/光标/滚动位置，
+   否则每敲一个字输入框就被销毁 → 焦点丢失 + 页面跳回顶部 */
+function rerenderKeepFocus(key){
+  const el=document.activeElement;
+  const sel=el&&typeof el.selectionStart==='number'?{s:el.selectionStart,e:el.selectionEnd}:null;
+  const y=window.scrollY;
+  renderAcc();
+  const n=key?document.querySelector('[data-fkey="'+key+'"]'):null;
+  if(n){n.focus();if(sel&&n.setSelectionRange){try{n.setSelectionRange(sel.s,sel.e)}catch(e){}}}
+  if(window.scrollY!==y)window.scrollTo(0,y);
+}
 function setProv(i,f,v){
   if(f==='name'){
     const old=cfg.providers[i].name;
     cfg.providers[i][f]=v;
     // 平台改名时，同步把引用了该旧名的账号的 provider 字段改成新名（否则保存会因悬空引用失败）
     (cfg.accounts||[]).forEach(a=>{if(a.provider===old)a.provider=v});
-    renderAcc();
+    rerenderKeepFocus('prov-'+i+'-name');
   }else{
     cfg.providers[i][f]=v;
   }
