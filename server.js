@@ -794,6 +794,11 @@ async function handleProxy(req, res, bodyText) {
       type: 'gateway_all_failed',
       message: '请求的 model 与所有回退 model 的账号都失败（限流/超时/5xx/内容审核），请加账号、配置回退或等冷却结束。',
       hint: '查看 http://' + config.host + ':' + config.port + '/admin/status',
+      // model_routes 是"完全接管"语义（非空即忽略请求 model 与回退链），历史上两次造成全量 502，这里自解释
+      ...(config.model_routes.length ? {
+        route_note: '⚠️ model_routes 非空，正在完全接管路由：所有请求只打 ' + JSON.stringify(config.model_routes) +
+          '，你请求的 model 与 model_fallback 回退链都被忽略。想恢复按请求路由请把 model_routes 清空后 POST /admin/reload。',
+      } : {}),
       last_error: lastError,
     },
   }));
