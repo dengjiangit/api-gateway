@@ -124,6 +124,8 @@ pre{background:var(--code);border:1px solid var(--border);border-radius:8px;padd
     <span class="muted">层级：平台（base_url + 该平台的模型列表）→ 平台下的账号（key + 排名/权重）。账号可不填 models，自动继承所属平台。</span>
     <span style="flex:1"></span>
     <button class="btn sm" onclick="verifyAll()">验证全部账号</button>
+    <button class="btn sm" onclick="toggleAllProvs(true)">全部展开</button>
+    <button class="btn sm" onclick="toggleAllProvs(false)">全部收起</button>
     <button class="btn pri sm" onclick="addProvider()">+ 添加平台</button>
   </div>
   <div id="provTree"></div>
@@ -281,10 +283,11 @@ function renderAcc(){
     const accs=(cfg.accounts||[]).map((a,i)=>({a,i})).filter(x=>x.a.provider===p.name);
     return `
   <div class="prov-card">
-    <div class="acc-head"><b>平台 ${pi+1}：${esc(p.name||'(未命名)')}</b>
+    <div class="acc-head"><b style="cursor:pointer;user-select:none;flex:1" onclick="toggleProv(${pi})" title="点击展开/收起">${openProvs.has(p)?'▾':'▸'} 平台 ${pi+1}：${esc(p.name||'(未命名)')} <span class="muted" style="font-weight:normal">（${models.length} 模型 / ${accs.length} 账号）</span></b>
       <span><button class="btn sm" onclick="fetchModels(${pi}, this)">拉取模型</button>
       <button class="btn sm" onclick="addAccountTo(${pi})">+ 在此平台下添加账号</button>
       <button class="btn danger sm" onclick="delProvider(${pi})">删除平台</button></span></div>
+    <div ${openProvs.has(p)?'':'style="display:none"'}>
     <div class="frm">
       <div><label>平台名称 name</label><input data-fkey="prov-${pi}-name" value="${esc(p.name)}" oninput="setProv(${pi},'name',this.value)"></div>
       <div><label>base_url</label><input class="mono" value="${esc(p.base_url)}" oninput="setProv(${pi},'base_url',this.value)"></div>
@@ -315,11 +318,12 @@ function renderAcc(){
         </div>
       </div>`).join('')||'<div class="muted">（此平台下还没有账号）</div>'}
     </div>
+    </div>
   </div>`;
   }).join('');
 }
 function setAcc(i,f,v){cfg.accounts[i][f]=v;markDirty()}
-function addAccountTo(pi){const pn=cfg.providers[pi].name;cfg.accounts=cfg.accounts||[];cfg.accounts.push({name:'acc-'+(cfg.accounts.length+1),provider:pn,api_key:'',models:[]});renderAcc();markDirty()}
+function addAccountTo(pi){const pn=cfg.providers[pi].name;cfg.accounts=cfg.accounts||[];cfg.accounts.push({name:'acc-'+(cfg.accounts.length+1),provider:pn,api_key:'',models:[]});openProvs.add(cfg.providers[pi]);renderAcc();markDirty()}
 function delAccount(i){if(!confirm('删除账号 '+cfg.accounts[i].name+'？'))return;cfg.accounts.splice(i,1);renderAcc();markDirty()}
 function setProvModel(pi,mi,f,v){
   const p=cfg.providers[pi]; if(!Array.isArray(p.models)) p.models=[];
@@ -329,7 +333,7 @@ function setProvModel(pi,mi,f,v){
   else { v=String(v).trim(); if(v===''){ delete m[f]; } else { m[f]=parseFloat(v); } }
   markDirty();
 }
-function addProvModel(pi){const p=cfg.providers[pi];if(!Array.isArray(p.models))p.models=[];p.models.push({name:''});renderAcc();markDirty()}
+function addProvModel(pi){const p=cfg.providers[pi];if(!Array.isArray(p.models))p.models=[];p.models.push({name:''});openProvs.add(p);renderAcc();markDirty()}
 function delProvModel(pi,mi){cfg.providers[pi].models.splice(mi,1);renderAcc();markDirty()}
 /* 平台改名会整树重建（账号按平台名重新分组），重渲染后恢复焦点/光标/滚动位置，
    否则每敲一个字输入框就被销毁 → 焦点丢失 + 页面跳回顶部 */
@@ -354,7 +358,11 @@ function setProv(i,f,v){
   }
   markDirty();
 }
-function addProvider(){cfg.providers=cfg.providers||[];cfg.providers.push({name:'provider-'+(cfg.providers.length+1),base_url:'https://'});renderAcc();markDirty()}
+/* 平台展开状态：按 provider 对象引用记录（改名不会丢；默认全部收起） */
+const openProvs=new Set();
+function toggleProv(pi){const p=cfg.providers[pi];if(openProvs.has(p))openProvs.delete(p);else openProvs.add(p);renderAcc()}
+function toggleAllProvs(open){openProvs.clear();if(open)(cfg.providers||[]).forEach(p=>openProvs.add(p));renderAcc()}
+function addProvider(){cfg.providers=cfg.providers||[];const np={name:'provider-'+(cfg.providers.length+1),base_url:'https://'};cfg.providers.push(np);openProvs.add(np);renderAcc();markDirty()}
 function delProvider(i){const used=(cfg.accounts||[]).some(a=>a.provider===cfg.providers[i].name);if(used&&!confirm('有账号在用这个平台，仍删除？'))return;cfg.providers.splice(i,1);renderAcc();markDirty()}
 
 /* ===== 拉取模型（弹窗勾选，而非直接覆盖） ===== */
